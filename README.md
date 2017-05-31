@@ -41,7 +41,7 @@ Aggregation
 ```
 select avg(age),min(age),max(age),count(student),count(distinct student) from test group by grade,class limit 10
 ```
-Beyond SQl
+Beyond SQL
  * range age group 20-25,25-30,30-35,35-40
 	```
 	SELECT COUNT(age) FROM bank GROUP BY range(age, 20,25,30,35,40)
