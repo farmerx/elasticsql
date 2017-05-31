@@ -68,7 +68,7 @@ package main
 
 import (
     "fmt"
-    "github.com/farmerx/elasticSQL"
+    "github.com/farmerx/essql"
 )
 
 var sql = `
