@@ -70,8 +70,13 @@ func handleSelect(Select *sqlparser.Select) (table string, dsl string, err error
 		size = sqlparser.String(Select.Limit.Rowcount)
 	}
 	var aggFlag = false
-	var aggStr string
-	if len(Select.GroupBy) > 0 {
+	var aggStr []byte
+	funcArr, _, err := handleSelectExpr(Select.SelectExprs)
+	if err != nil {
+		return ``, ``, err
+	}
+
+	if len(Select.GroupBy) > 0 || len(funcArr) > 0 {
 		aggFlag = true
 		if aggStr, err = handleSelectGroupBy(Select, size); err != nil {
 			return ``, ``, err
@@ -87,7 +92,7 @@ func handleSelect(Select *sqlparser.Select) (table string, dsl string, err error
 			orderByArr = append(orderByArr, orderByStr)
 		}
 	}
-	return table, buildDSL(queryMapStr, from, size, aggStr, orderByArr), nil
+	return table, buildDSL(queryMapStr, from, size, string(aggStr), orderByArr), nil
 }
 
 func handleSelectWhere(expr *sqlparser.BoolExpr, topLevel bool, parent *sqlparser.BoolExpr) (string, error) {
@@ -143,7 +148,7 @@ func handleSelectWhere(expr *sqlparser.BoolExpr, topLevel bool, parent *sqlparse
 }
 
 // handleSelectGroupBy 处置Select 里面的group by
-func handleSelectGroupBy(Select *sqlparser.Select, size string) (string, error) {
+func handleSelectGroupBy(Select *sqlparser.Select, size string) ([]byte, error) {
 	var aggMap = make(map[string]interface{}, 0)
 	var parentNode *map[string]interface{}
 	// 解析各路groupby
@@ -161,9 +166,9 @@ func handleSelectGroupBy(Select *sqlparser.Select, size string) (string, error) 
 				parentNode = &innerMap
 			}
 		case *sqlparser.FuncExpr:
-			innerMap, err := handleGroupByFuncExpr(itemValue)
+			innerMap, err := handleGroupByFuncExpr(itemValue, size)
 			if err != nil {
-				return ``, err
+				return nil, err
 			}
 			keyName := sqlparser.String(itemValue)
 			keyName = strings.Replace(keyName, `'`, ``, -1)
@@ -172,20 +177,19 @@ func handleSelectGroupBy(Select *sqlparser.Select, size string) (string, error) 
 			parentNode = &innerMap
 		}
 	}
-	if parentNode == nil {
-		return "", errors.New("elasticsql: agg not supported yet")
-	}
+	// if parentNode == nil {
+	// 	return "", errors.New("elasticsql: agg not supported yet")
+	// }
 	// 解析avg, sum， count...等等 distint
 	innerAggMap, err := handleSelectExprGroupBy(Select.SelectExprs)
 	if err != nil {
-		return ``, err
+		return nil, err
 	}
-	if len(innerAggMap) > 0 {
+
+	if len(innerAggMap) > 0 && parentNode != nil {
 		(*parentNode)["aggregations"] = innerAggMap
+	} else if len(innerAggMap) > 0 {
+		return json.Marshal(innerAggMap)
 	}
-	mapJSON, err := json.Marshal(aggMap)
-	if err != nil {
-		return ``, err
-	}
-	return string(mapJSON), nil
+	return json.Marshal(aggMap)
 }

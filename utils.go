@@ -174,7 +174,7 @@ func getComparisonExprRight(comparisonExpr *sqlparser.ComparisonExpr) (rightStr 
 }
 
 // handleGroupBYFuncExpr 处置group by 包含方法的
-func handleGroupByFuncExpr(funcExpr *sqlparser.FuncExpr) (map[string]interface{}, error) {
+func handleGroupByFuncExpr(funcExpr *sqlparser.FuncExpr, size string) (map[string]interface{}, error) {
 	innerMap := make(map[string]interface{}, 0)
 	switch string(funcExpr.Name) {
 	case `date_histogram`:
@@ -214,6 +214,82 @@ func handleGroupByFuncExpr(funcExpr *sqlparser.FuncExpr) (map[string]interface{}
 			"format":   format,
 		}
 		return innerMap, nil
+	case `range`:
+		var vals = []string{}
+		for _, expr := range funcExpr.Exprs {
+			nonStarExpr, ok := expr.(*sqlparser.NonStarExpr)
+			if !ok {
+				return nil, errors.New("elasticsql: unsupported expression in date_histogram")
+			}
+			keyName := strings.Replace(sqlparser.String(nonStarExpr.Expr), `'`, ``, -1)
+			keyName = strings.Replace(keyName, ` `, ``, -1)
+			vals = append(vals, keyName)
+		}
+		if len(vals) < 3 {
+			return nil, errors.New(`elasticsql: agg rang parameter must be greater than three`)
+		}
+		var ranges = make([]map[string]interface{}, 0)
+		for i := 1; i < len(vals)-1; i++ {
+			ranges = append(ranges, map[string]interface{}{
+				"from": vals[i],
+				"to":   vals[i+1],
+			})
+		}
+		innerMap["range"] = map[string]interface{}{
+			"field":  vals[0],
+			"ranges": ranges,
+		}
+		return innerMap, nil
+	case `date_range`:
+		var field string
+		format := "yyyy-MM-dd HH:mm:ss"
+		var vals = []string{}
+		// 遍历funcExpr(filed="xxx",interval="1h",format="")
+		// the expression in date_histogram must be like a = b format
+		for _, expr := range funcExpr.Exprs {
+			nonStarExpr, ok := expr.(*sqlparser.NonStarExpr)
+			if !ok {
+				return nil, errors.New("elasticsql: unsupported expression in date_histogram")
+			}
+			switch comparisonExpr := nonStarExpr.Expr.(type) {
+			case *sqlparser.NotExpr:
+				fmt.Println(sqlparser.String(comparisonExpr.Expr))
+			case *sqlparser.ComparisonExpr:
+				left, ok := comparisonExpr.Left.(*sqlparser.ColName)
+				if !ok {
+					return nil, errors.New("elaticsql: param error in date_histogram")
+				}
+				rightStr := sqlparser.String(comparisonExpr.Right)
+				rightStr = strings.Replace(rightStr, `'`, ``, -1)
+				if string(left.Name) == "field" {
+					field = rightStr
+				}
+				if string(left.Name) == "format" {
+					format = rightStr
+				}
+				fmt.Println(field, format)
+			case sqlparser.StrVal:
+				keyName := strings.Replace(sqlparser.String(comparisonExpr), `'`, ``, -1)
+				keyName = strings.Replace(keyName, ` `, ``, -1)
+				vals = append(vals, keyName)
+			}
+		}
+		if len(vals) < 3 {
+			return nil, errors.New(`elasticsql: agg date_rang parameter must be greater than three`)
+		}
+		var ranges = make([]map[string]interface{}, 0)
+		for i := 0; i < len(vals)-1; i++ {
+			ranges = append(ranges, map[string]interface{}{
+				"from": vals[i],
+				"to":   vals[i+1],
+			})
+		}
+		innerMap["range"] = map[string]interface{}{
+			"field":  field,
+			"ranges": ranges,
+			"format": format,
+		}
+		return innerMap, nil
 	}
 	return nil, errors.New(`elasticsql: agg not supported yet`)
 }
@@ -251,7 +327,8 @@ func handleSelectExpr(sqlSelect sqlparser.SelectExprs) ([]*sqlparser.FuncExpr, [
 			funcExpr := expr.Expr.(*sqlparser.FuncExpr)
 			funcArr = append(funcArr, funcExpr)
 		case *sqlparser.ColName:
-			continue
+			colExpr := expr.Expr.(*sqlparser.ColName)
+			colArr = append(colArr, colExpr)
 		default:
 			// ignore
 		}
@@ -271,6 +348,15 @@ func handleSelectExprGroupBy(SelectExprs sqlparser.SelectExprs) (map[string]inte
 		aggName := strings.ToUpper(string(v.Name)) + `(` + sqlparser.String(v.Exprs) + `)`
 		switch string(v.Name) {
 		case "count":
+			if v.Distinct {
+				aggName = strings.ToUpper(string(v.Name)) + `(` + `distinct ` + sqlparser.String(v.Exprs) + `)`
+				innerAggMap[aggName] = map[string]interface{}{
+					"cardinality": map[string]string{
+						"field": sqlparser.String(v.Exprs),
+					},
+				}
+				break
+			}
 			//count need to distingush * and normal field name
 			if sqlparser.String(v.Exprs) == "*" {
 				innerAggMap[aggName] = map[string]interface{}{
