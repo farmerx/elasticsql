@@ -15,7 +15,7 @@ SQL Features Support:
 - [x] SQL Group By
 - [x] SQL AND & OR
 - [x] SQL Like & NOT Like
-- [ ] SQL COUNT distinct
+- [x] SQL COUNT distinct
 - [x] SQL In & Not In
 - [x] SQL Between
 - [x] SQL avg()、count(*), count(field), min(field), max(field)
@@ -24,6 +24,8 @@ Beyond SQL Features Support：
 - [ ] ES TopHits
 - [x] ES date_histogram
 - [ ] ES STATS
+- [x] ES RANGE
+- [x] ES DATE_RANGE
 
 
 
