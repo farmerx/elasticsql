@@ -1,4 +1,4 @@
-ESSQL
+ELASTICSQL
 -----------
 [![Build Status](https://travis-ci.org/cch123/elasticsql.svg?branch=master)](https://travis-ci.org/farmerx/essql)
 [![Go Documentation](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](https://godoc.org/github.com/farmerx/essql)
@@ -11,7 +11,7 @@ ESSQL
 
 - [x] SQL Select
 - [x] SQL Where
-- [x] SQL Order By
+- [x] SQL Order BySQL
 - [x] SQL Group By
 - [x] SQL AND & OR
 - [x] SQL Like & NOT Like
@@ -60,7 +60,7 @@ Beyond SQL
 ## PKG Usage
 -------------
 
-> go get github.com/farmerx/essql
+> go get github.com/farmerx/elasticSQL
 
 Demo :
 ```go
@@ -68,7 +68,7 @@ package main
 
 import (
     "fmt"
-    "github.com/farmerx/essql"
+    "github.com/farmerx/elasticSQL"
 )
 
 var sql = `
@@ -87,7 +87,7 @@ var sql4 = `
 
 
 func main() {
-    esql := essql.NewElasticSQL(essql.InitOptions{})
+    esql := elasticSQL.NewElasticSQL(eslasticSQL.InitOptions{})
     table, dsl, err := esql.SQLConvert(sql)
 	fmt.Println(table, dsl, err)
 }
