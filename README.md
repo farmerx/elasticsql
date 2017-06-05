@@ -1,9 +1,9 @@
 ELASTICSQL
 -----------
-[![Build Status](https://travis-ci.org/cch123/elasticsql.svg?branch=master)](https://travis-ci.org/farmerx/essql)
-[![Go Documentation](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](https://godoc.org/github.com/farmerx/essql)
-[![Coverage Status](https://coveralls.io/repos/github/cch123/elasticsql/badge.svg?branch=master)](https://coveralls.io/github/farmerx/essql?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/cch123/elasticsql)](https://goreportcard.com/report/github.com/farmerx/essql)
+[![Build Status](https://travis-ci.org/farmerx/elasticsql.svg?branch=master)](https://travis-ci.org/farmerx/elasticsql)
+[![Go Documentation](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](https://godoc.org/github.com/farmerx/elasticsql)
+[![Coverage Status](https://coveralls.io/repos/github/farmerx/elasticsql/badge.svg?branch=master)](https://coveralls.io/github/farmerx/elasticsql?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/farmerx/elasticsql)](https://goreportcard.com/report/github.com/farmerx/elasticsql)
 
 > ElasticSQL package converts SQL to ElasticSearch DSL
 
@@ -60,7 +60,7 @@ Beyond SQL
 ## PKG Usage
 -------------
 
-> go get github.com/farmerx/elasticSQL
+> go get github.com/farmerx/elasticsql
 
 Demo :
 ```go
@@ -68,7 +68,7 @@ package main
 
 import (
     "fmt"
-    "github.com/farmerx/elasticSQL"
+    "github.com/farmerx/elasticsql"
 )
 
 var sql = `
@@ -87,7 +87,7 @@ var sql4 = `
 
 
 func main() {
-    esql := elasticSQL.NewElasticSQL(eslasticSQL.InitOptions{})
+    esql := elasticsql.NewElasticSQL(eslasticsql.InitOptions{})
     table, dsl, err := esql.SQLConvert(sql)
 	fmt.Println(table, dsl, err)
 }
