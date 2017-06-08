@@ -3,9 +3,8 @@ package elasticsql
 import (
 	"encoding/json"
 	"errors"
-	"strings"
-
 	"fmt"
+	"strings"
 
 	"github.com/xwb1989/sqlparser"
 )
