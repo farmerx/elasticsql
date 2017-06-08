@@ -21,9 +21,9 @@ ElasticSQL
 - [x] SQL avg()、count(*), count(field), min(field), max(field)
 
 ## Beyond SQL Features Support：
-- [ ] ES TopHits
+- [x] ES TopHits
 - [x] ES date_histogram
-- [ ] ES STATS
+- [x] ES STATS
 - [x] ES RANGE
 - [x] ES DATE_RANGE
 
@@ -54,6 +54,14 @@ Beyond SQL
 
 	```
 	select * from test group by date_histogram(field="changeTime",interval="1h",format="yyyy-MM-dd HH:mm:ss")
+	```
+ * stats
+ 	```
+	 SELECT online FROM online group by stats(field="grade")
+	```
+ * topHits
+ 	```
+	  select top_hits(field="class", hitssort="age:desc", taglimit = "10", hitslimit = "1", _source="name,age,class,gender") from school
 	```
 
 
