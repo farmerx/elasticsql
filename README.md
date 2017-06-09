@@ -101,7 +101,8 @@ func main() {
 }
 
 ```
-License
------------
-MIT
+
+## Licenses
+
+This program is under the terms of the MIT License. See [LICENSE](https://github.com/farmerx/elasticsql/blob/master/LICENSE) for the full license text.
 
