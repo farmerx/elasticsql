@@ -4,6 +4,7 @@ ElasticSQL
 [![Go Documentation](http://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](https://godoc.org/github.com/farmerx/elasticsql)
 [![Coverage Status](https://coveralls.io/repos/github/farmerx/elasticsql/badge.svg?branch=master)](https://coveralls.io/github/farmerx/elasticsql?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/farmerx/elasticsql)](https://goreportcard.com/report/github.com/farmerx/elasticsql)
+[![license](https://img.shields.io/github/license/mashape/apistatus.svg?maxAge=2592000)](https://github.com/farmerx/elasticsql/blob/master/LICENSE)
 
 > ElasticSQL package converts SQL to ElasticSearch DSL
 
