@@ -1,7 +1,6 @@
 package elasticsql
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -9,186 +8,157 @@ import (
 	"github.com/xwb1989/sqlparser"
 )
 
-// InitOptions ...
-type InitOptions struct {
-}
-
 // ElasticSQL ..
 type ElasticSQL struct {
 }
 
 // NewElasticSQL ...
-func NewElasticSQL(options InitOptions) *ElasticSQL {
-	esql := new(ElasticSQL)
-	return esql
+func NewElasticSQL() *ElasticSQL {
+	return new(ElasticSQL)
 }
 
 // SQLConvert sql convert to elasticsearch dsl
 func (esql *ElasticSQL) SQLConvert(sql string) (table string, dsl string, err error) {
 	stmt, err := sqlparser.Parse(sql)
 	if err != nil {
-		return ``, ``, err
+		return ``, ``, errors.New(`ElastciSQL: ` + err.Error())
 	}
 	switch v := stmt.(type) {
 	case *sqlparser.Select:
-		return handleSelect(v)
+		return handleParseSelect(v)
 	default:
-		return ``, ``, errors.New(`不支持此类查询`)
+		return ``, ``, errors.New(`ElasticSQL: Support SQL where parsing only`)
 	}
 }
 
-// handleSelect 处理select 类型的查询
-func handleSelect(Select *sqlparser.Select) (table string, dsl string, err error) {
-	var rootParent sqlparser.BoolExpr
-	var defaultQueryMapStr = `{"bool" : {"must": [{"match_all" : {}}]}}`
-	var queryMapStr string
-	// if select where include conditions
-	if Select.Where != nil {
-		queryMapStr, err = handleSelectWhere(&Select.Where.Expr, true, &rootParent)
-		if err != nil {
-			return ``, ``, err
-		}
+// handleParseSelect  parse sql select
+func handleParseSelect(selectStmt *sqlparser.Select) (table string, dsl string, err error) {
+	// 获取from
+	if table, err = getFromTable(selectStmt); err != nil {
+		return ``, ``, err
 	}
-	if queryMapStr == "" {
-		queryMapStr = defaultQueryMapStr
-	}
-	// 处理
-	if len(Select.From) != 1 {
-		return ``, ``, errors.New("elasticsql: multiple from currently not supported")
-	}
-	// require Select from and convert to string
-	table = sqlparser.String(Select.From)
-	table = strings.Replace(table, "`", "", -1)
-
-	// require queryFrom and query Size
-	from, size := "0", "1"
-	if Select.Limit != nil {
-		if Select.Limit.Offset != nil {
-			from = sqlparser.String(Select.Limit.Offset)
-		}
-		size = sqlparser.String(Select.Limit.Rowcount)
-	}
-	var aggFlag = false
-	var aggStr []byte
-	funcArr, _, err := handleSelectExpr(Select.SelectExprs)
+	from, size := getFromAndSize(selectStmt)
+	// 解析where
+	querydsl, err := handleSelectWhere(&selectStmt.Where.Expr, true)
 	if err != nil {
 		return ``, ``, err
 	}
-
-	if len(Select.GroupBy) > 0 || len(funcArr) > 0 {
-		aggFlag = true
-		if aggStr, err = handleSelectGroupBy(Select, size); err != nil {
-			return ``, ``, err
-		}
-		size = "0"
+	aggsdsl, err := handleSelectGroupBy(selectStmt, size)
+	if err != nil {
+		return ``, ``, err
 	}
-	// Handle order by
-	// when executating aggregations, order by is useless
 	var orderByArr []string
-	if aggFlag == false {
-		for _, orderByExpr := range Select.OrderBy {
+	if aggsdsl != nil {
+		from, size = "0", "0"
+	} else {
+		// Handle order by
+		// when executating aggregations, order by is useless
+		for _, orderByExpr := range selectStmt.OrderBy {
 			orderByStr := fmt.Sprintf(`{"%v": "%v"}`, sqlparser.String(orderByExpr.Expr), orderByExpr.Direction)
 			orderByArr = append(orderByArr, orderByStr)
 		}
 	}
-	return table, buildDSL(queryMapStr, from, size, string(aggStr), orderByArr), nil
+	return table, buildDSL(querydsl, from, size, string(aggsdsl), []string{}), nil
 }
 
-func handleSelectWhere(expr *sqlparser.BoolExpr, topLevel bool, parent *sqlparser.BoolExpr) (string, error) {
-	if expr == nil {
-		return "", errors.New("elasticsql: error expression cannot be nil here")
+func buildDSL(queryMapStr, queryFrom, querySize string, aggStr string, orderByArr []string) string {
+	resultMap := make(map[string]interface{})
+	resultMap["query"] = queryMapStr
+	resultMap["from"] = queryFrom
+	resultMap["size"] = querySize
+	if len(aggStr) > 0 {
+		resultMap["aggregations"] = aggStr
 	}
-	switch exprValue := (*expr).(type) {
-	case *sqlparser.AndExpr:
-		resultStr, err := handleAndExpr(exprValue, expr)
+
+	if len(orderByArr) > 0 {
+		resultMap["sort"] = fmt.Sprintf("[%v]", strings.Join(orderByArr, ","))
+	}
+
+	// keep the travesal in order, avoid unpredicted json
+	var keySlice = []string{"query", "from", "size", "sort", "aggregations"}
+	var resultArr []string
+	for _, mapKey := range keySlice {
+		if val, ok := resultMap[mapKey]; ok {
+			resultArr = append(resultArr, fmt.Sprintf(`"%v" : %v`, mapKey, val))
+		}
+	}
+	return "{" + strings.Join(resultArr, ",") + "}"
+}
+
+// extract func expressions from select exprs
+func handleSelectFuncExpr(sqlSelect sqlparser.SelectExprs) ([]*sqlparser.FuncExpr, []*sqlparser.ColName, error) {
+	var colArr []*sqlparser.ColName
+	var funcArr []*sqlparser.FuncExpr
+	for _, selectVal := range sqlSelect {
+		expr, ok := selectVal.(*sqlparser.AliasedExpr)
+		if !ok {
+			continue // no need to handle, star expression * just skip is ok
+		}
+		switch exprV := expr.Expr.(type) {
+		case *sqlparser.ColName:
+			colArr = append(colArr, exprV)
+		case *sqlparser.FuncExpr:
+			funcArr = append(funcArr, exprV)
+		default:
+			// ignore
+			continue
+		}
+	}
+	return funcArr, colArr, nil
+}
+
+// getSqlFrom
+// 如果From 含有特殊 "-","*"等用"``" 引起来
+func getFromTable(selectStmt *sqlparser.Select) (string, error) {
+	// 处理
+	if len(selectStmt.From) != 1 {
+		return ``, errors.New("ElasticSQL: multiple SQL from currently not supported")
+	}
+	return sqlparser.String(selectStmt.From), nil
+}
+
+// getFromAndSize ...
+// get limit and offset
+func getFromAndSize(selectStmt *sqlparser.Select) (from, size string) {
+	from, size = "0", "10"
+	if selectStmt.Limit == nil {
+		return
+	}
+	if selectStmt.Limit.Offset != nil {
+		from = sqlparser.String(selectStmt.Limit.Offset)
+	}
+	size = sqlparser.String(selectStmt.Limit.Rowcount)
+	return
+}
+
+// handleSelectWhere ....
+// 解析sql where
+func handleSelectWhere(expr *sqlparser.Expr, topLevel bool) (string, error) {
+	if expr == nil {
+		return "", errors.New("ElasticSQL: SQL where exprssion can not be empty")
+	}
+	switch exprVal := (*expr).(type) {
+	case *sqlparser.AndExpr: // where and
+		resultStr, err := handleAndExpr(exprVal)
 		if err != nil {
 			return ``, err
-		}
-		if _, ok := (*parent).(*sqlparser.AndExpr); ok {
-			return resultStr, nil
 		}
 		return fmt.Sprintf(`{"bool" : {"must" : [%v]}}`, resultStr), nil
-	case *sqlparser.OrExpr:
-		resultStr, err := handleOrExpr(exprValue, expr)
+	case *sqlparser.OrExpr: // wehew or
+		resultStr, err := handleOrExpr(exprVal)
 		if err != nil {
 			return ``, err
-		}
-		if _, ok := (*parent).(*sqlparser.OrExpr); ok {
-			return resultStr, nil
 		}
 		return fmt.Sprintf(`{"bool" : {"should" : [%v]}}`, resultStr), nil
 	case *sqlparser.ComparisonExpr:
-		return handleComparisonExpr(exprValue, topLevel)
-	case *sqlparser.NullCheck:
-		return "", errors.New("elasticsql: null check expression currently not supported")
+		return handleComparisonExpr(exprVal, topLevel)
 	case *sqlparser.RangeCond:
-		// between a and b
-		colName, ok := exprValue.Left.(*sqlparser.ColName)
-		if !ok {
-			return "", errors.New("elasticsql: range column name missing")
-		}
-		colNameStr := sqlparser.String(colName)
-		fromStr := strings.Trim(sqlparser.String(exprValue.From), `'`)
-		toStr := strings.Trim(sqlparser.String(exprValue.To), `'`)
-		resultStr := fmt.Sprintf(`{"range" : {"%v" : {"from" : "%v", "to" : "%v"}}}`, colNameStr, fromStr, toStr)
-		if topLevel {
-			resultStr = fmt.Sprintf(`{"bool" : {"must" : [%v]}}`, resultStr)
-		}
-		return resultStr, nil
-	case *sqlparser.ParenBoolExpr:
-		parentBoolExpr := (*expr).(*sqlparser.ParenBoolExpr)
-		boolExpr := parentBoolExpr.Expr
-		return handleSelectWhere(&boolExpr, false, parent)
+		return handleRangeCond(exprVal, topLevel)
+	case *sqlparser.ParenExpr:
+		return handleSelectWhere(&exprVal.Expr, topLevel)
 	case *sqlparser.NotExpr:
-		return "", errors.New("elasticsql: not expression currently not supported")
+		return ``, errors.New("ElasticSQL: not expression currently not supported")
 	default:
-		return ``, errors.New("elaticsql: logically cannot reached here")
+		return ``, errors.New("ElasticSQL: Such expression currently not supported")
 	}
-}
-
-// handleSelectGroupBy 处置Select 里面的group by
-func handleSelectGroupBy(Select *sqlparser.Select, size string) ([]byte, error) {
-	var aggMap = make(map[string]interface{}, 0)
-	var parentNode *map[string]interface{}
-	// 解析各路groupby
-	for index, item := range Select.GroupBy {
-		switch itemValue := item.(type) {
-		case *sqlparser.ColName:
-			innerMap := handleGroupByColName(itemValue, index, size)
-			if index == 0 {
-				aggMap[string(itemValue.Name)] = innerMap
-				parentNode = &innerMap
-			} else {
-				(*parentNode)["aggregations"] = map[string]interface{}{
-					string(itemValue.Name): innerMap,
-				}
-				parentNode = &innerMap
-			}
-		case *sqlparser.FuncExpr:
-			innerMap, err := handleGroupByFuncExpr(itemValue, size)
-			if err != nil {
-				return nil, err
-			}
-			keyName := sqlparser.String(itemValue)
-			keyName = strings.Replace(keyName, `'`, ``, -1)
-			keyName = strings.Replace(keyName, ` `, ``, -1)
-			aggMap[keyName] = innerMap
-			parentNode = &innerMap
-		}
-	}
-	// if parentNode == nil {
-	// 	return "", errors.New("elasticsql: agg not supported yet")
-	// }
-	// 解析avg, sum， count...等等 distint
-	innerAggMap, err := handleSelectExprGroupBy(Select.SelectExprs)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(innerAggMap) > 0 && parentNode != nil {
-		(*parentNode)["aggregations"] = innerAggMap
-	} else if len(innerAggMap) > 0 {
-		return json.Marshal(innerAggMap)
-	}
-	return json.Marshal(aggMap)
 }
