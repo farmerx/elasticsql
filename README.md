@@ -40,16 +40,16 @@ select * from test where a=1 and b="c" and create_time between '2015-01-01T00:00
 ```
 Aggregation
 ```
-select avg(age),min(age),max(age),count(student),count(distinct student) from test group by grade,class limit 10
+select avg(age),min(age),max(age), count(student), count(distinct student) from test group by grade,class limit 10
 ```
 Beyond SQL
  * range age group 20-25,25-30,30-35,35-40
 	```
-	SELECT COUNT(age) FROM bank GROUP BY range(age, 20,25,30,35,40)
+	SELECT COUNT(age) FROM bank GROUP BY range(field="age", range="20,25,30,35,40")
 	```
  * range date group by your config
  	```
-	SELECT online FROM online GROUP BY date_range(field="insert_time",format="yyyy-MM-dd" ,"2014-08-18","2014-08-17","now-8d","now-7d","now-6d","now")
+	SELECT online FROM online GROUP BY date_range(field="insert_time",format="yyyy-MM-dd" ,range="2014-08-18,2014-08-17,now-8d,now-7d,now-6d,now")
 	```
  * range date group by day
 
