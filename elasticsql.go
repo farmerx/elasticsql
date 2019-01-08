@@ -38,11 +38,18 @@ func handleParseSelect(selectStmt *sqlparser.Select) (table string, dsl string, 
 		return ``, ``, err
 	}
 	from, size := getFromAndSize(selectStmt)
+
 	// 解析where
-	querydsl, err := handleSelectWhere(&selectStmt.Where.Expr, true)
-	if err != nil {
-		return ``, ``, err
+	querydsl := ``
+	if selectStmt.Where != nil {
+		if querydsl, err = handleSelectWhere(&selectStmt.Where.Expr, true); err != nil {
+			return ``, ``, err
+		}
 	}
+	if querydsl == `` {
+		querydsl = `{"bool" : {"must": [{"match_all" : {}}]}}`
+	}
+
 	aggsdsl, err := handleSelectGroupBy(selectStmt, size)
 	if err != nil {
 		return ``, ``, err
@@ -134,9 +141,11 @@ func getFromAndSize(selectStmt *sqlparser.Select) (from, size string) {
 // handleSelectWhere ....
 // 解析sql where
 func handleSelectWhere(expr *sqlparser.Expr, topLevel bool) (string, error) {
+
 	if expr == nil {
 		return "", errors.New("ElasticSQL: SQL where exprssion can not be empty")
 	}
+
 	switch exprVal := (*expr).(type) {
 	case *sqlparser.AndExpr: // where and
 		resultStr, err := handleAndExpr(exprVal)
