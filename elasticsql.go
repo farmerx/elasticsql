@@ -48,7 +48,6 @@ func handleParseSelect(selectStmt *sqlparser.Select) (table string, dsl string, 
 	if querydsl == `` {
 		querydsl = `{"bool" : {"must": [{"match_all" : {}}]}}`
 	}
-
 	colArr, aggsdsl, err := handleSelectGroupBy(selectStmt, size)
 	if err != nil {
 		return ``, ``, err
@@ -128,7 +127,6 @@ func handleSelectWhere(expr *sqlparser.Expr, topLevel bool) (string, error) {
 	if expr == nil {
 		return "", errors.New("ElasticSQL: SQL where exprssion can not be empty")
 	}
-
 	switch exprVal := (*expr).(type) {
 	case *sqlparser.AndExpr: // where and
 		resultStr, err := handleAndExpr(exprVal)
