@@ -104,6 +104,87 @@ func main() {
 
 ```
 
+## OUTPUT
+```
+date_historgram
+{
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "match_all": {}
+                }
+            ]
+        }
+    },
+    "from": 0,
+    "size": 0,
+    "aggregations": {
+        "date_histogram": {
+            "date_histogram": {
+                "field": "changeTime",
+                "format": "yyyy-MM-dd HH:mm:ss",
+                "interval": "1h"
+            }
+        }
+    }
+}
+
+date_range
+{
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "match_all": {}
+                }
+            ]
+        }
+    },
+    "from": 0,
+    "size": 0,
+    "aggregations": {
+        "date_range": {
+            "range": {
+                "field": "insert_time",
+                "ranges": [
+                    {
+                        "format": "yyyy-MM-dd",
+                        "from": "2014-08-18",
+                        "to": "2014-08-17"
+                    },
+                    {
+                        "format": "yyyy-MM-dd",
+                        "from": "2014-08-17",
+                        "to": "now-8d"
+                    },
+                    {
+                        "format": "yyyy-MM-dd",
+                        "from": "now-8d",
+                        "to": "now-7d"
+                    },
+                    {
+                        "format": "yyyy-MM-dd",
+                        "from": "now-7d",
+                        "to": "now-6d"
+                    },
+                    {
+                        "format": "yyyy-MM-dd",
+                        "from": "now-6d",
+                        "to": "now"
+                    },
+                    {
+                        "format": "yyyy-MM-dd",
+                        "from": "now"
+                    }
+                ]
+            }
+        }
+    }
+}
+...
+```
+
 ## Licenses
 
 This program is under the terms of the MIT License. See [LICENSE](https://github.com/farmerx/elasticsql/blob/master/LICENSE) for the full license text.
