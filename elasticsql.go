@@ -106,6 +106,9 @@ func handleSelectFuncExpr(sqlSelect sqlparser.SelectExprs) ([]*sqlparser.FuncExp
 	var colArr []string
 	var funcArr []*sqlparser.FuncExpr
 	for _, selectVal := range sqlSelect {
+		if _, ok := selectVal.(*sqlparser.StarExpr); ok {
+			colArr = append(colArr, sqlparser.String(selectVal))
+		}
 		expr, ok := selectVal.(*sqlparser.AliasedExpr)
 		if !ok {
 			continue // no need to handle, star expression * just skip is ok
@@ -120,6 +123,10 @@ func handleSelectFuncExpr(sqlSelect sqlparser.SelectExprs) ([]*sqlparser.FuncExp
 			continue
 		}
 	}
+	if len(colArr) == 1 && colArr[0] == `*` {
+		colArr = []string{}
+	}
+
 	return funcArr, colArr, nil
 }
 

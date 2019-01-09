@@ -1,7 +1,6 @@
 package elasticsql
 
 import (
-	"fmt"
 	"sync"
 	"testing"
 )
@@ -20,9 +19,30 @@ func init() {
 // 	fmt.Println(x, err)
 // }
 
+func Test_ParseSelectSomeField(t *testing.T) {
+	table, x, err := esql.SQLConvert(`select name, age, sex from student`)
+	if err != nil {
+		t.Error(err)
+	}
+	if x != `{"query" : {"bool" : {"must": [{"match_all" : {}}]}},"_source" : ["name","age","sex"],"from" : 0,"size" : 10}` {
+		t.Error("不符合预期")
+	}
+	if table != `student` {
+		t.Error(`不符合预期`)
+	}
+}
+
 func Test_ParseSelect(t *testing.T) {
-	_, x, err := esql.SQLConvert(`select name, age, sex from student`)
-	fmt.Println(x, err)
+	table, x, err := esql.SQLConvert(`select * from student`)
+	if err != nil {
+		t.Error(err)
+	}
+	if x != `{"query" : {"bool" : {"must": [{"match_all" : {}}]}},"from" : 0,"size" : 10}` {
+		t.Error("不符合预期")
+	}
+	if table != `student` {
+		t.Error(`不符合预期`)
+	}
 }
 
 // // select count(distinct mid) from test
