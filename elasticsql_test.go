@@ -15,8 +15,13 @@ func init() {
 
 }
 
-func Test_SQLConver(t *testing.T) {
-	_, x, err := esql.SQLConvert(`select avg(mid) from test where a=1 and b="c" and create_time between '2015-01-01T00:00:00+0800' and '2016-01-01T00:00:00+0800' and process_id > 1 group by class, date_range(field="insert_time",format="yyyy-MM-dd" , range ="2014-08-18,2014-08-17,now-8d,now-7d,now-6d,now") limit 20`)
+// func Test_SQLConver(t *testing.T) {
+// 	_, x, err := esql.SQLConvert(`select avg(mid) from test where a=1 and b="c" and create_time between '2015-01-01T00:00:00+0800' and '2016-01-01T00:00:00+0800' and process_id > 1 group by class, date_range(field="insert_time",format="yyyy-MM-dd" , range ="2014-08-18,2014-08-17,now-8d,now-7d,now-6d,now") limit 20`)
+// 	fmt.Println(x, err)
+// }
+
+func Test_ParseSelect(t *testing.T) {
+	_, x, err := esql.SQLConvert(`select name, age, sex from student`)
 	fmt.Println(x, err)
 }
 

@@ -1,6 +1,7 @@
 package elasticsql
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -50,7 +51,7 @@ func handleParseSelect(selectStmt *sqlparser.Select) (table string, dsl string, 
 		querydsl = `{"bool" : {"must": [{"match_all" : {}}]}}`
 	}
 
-	aggsdsl, err := handleSelectGroupBy(selectStmt, size)
+	colArr, aggsdsl, err := handleSelectGroupBy(selectStmt, size)
 	if err != nil {
 		return ``, ``, err
 	}
@@ -65,14 +66,16 @@ func handleParseSelect(selectStmt *sqlparser.Select) (table string, dsl string, 
 			orderByArr = append(orderByArr, orderByStr)
 		}
 	}
-	return table, buildDSL(querydsl, from, size, string(aggsdsl), []string{}), nil
+
+	return table, buildDSL(querydsl, from, size, string(aggsdsl), []string{}, colArr), nil
 }
 
-func buildDSL(queryMapStr, queryFrom, querySize string, aggStr string, orderByArr []string) string {
+func buildDSL(queryMapStr, queryFrom, querySize string, aggStr string, orderByArr []string, colArr []string) string {
 	resultMap := make(map[string]interface{})
 	resultMap["query"] = queryMapStr
 	resultMap["from"] = queryFrom
 	resultMap["size"] = querySize
+
 	if len(aggStr) > 0 {
 		resultMap["aggregations"] = aggStr
 	}
@@ -81,8 +84,14 @@ func buildDSL(queryMapStr, queryFrom, querySize string, aggStr string, orderByAr
 		resultMap["sort"] = fmt.Sprintf("[%v]", strings.Join(orderByArr, ","))
 	}
 
+	if len(colArr) > 0 {
+		cols, _ := json.Marshal(colArr)
+
+		resultMap["_source"] = string(cols)
+	}
+
 	// keep the travesal in order, avoid unpredicted json
-	var keySlice = []string{"query", "from", "size", "sort", "aggregations"}
+	var keySlice = []string{"query", "_source", "from", "size", "sort", "aggregations"}
 	var resultArr []string
 	for _, mapKey := range keySlice {
 		if val, ok := resultMap[mapKey]; ok {
@@ -93,8 +102,8 @@ func buildDSL(queryMapStr, queryFrom, querySize string, aggStr string, orderByAr
 }
 
 // extract func expressions from select exprs
-func handleSelectFuncExpr(sqlSelect sqlparser.SelectExprs) ([]*sqlparser.FuncExpr, []*sqlparser.ColName, error) {
-	var colArr []*sqlparser.ColName
+func handleSelectFuncExpr(sqlSelect sqlparser.SelectExprs) ([]*sqlparser.FuncExpr, []string, error) {
+	var colArr []string
 	var funcArr []*sqlparser.FuncExpr
 	for _, selectVal := range sqlSelect {
 		expr, ok := selectVal.(*sqlparser.AliasedExpr)
@@ -103,7 +112,7 @@ func handleSelectFuncExpr(sqlSelect sqlparser.SelectExprs) ([]*sqlparser.FuncExp
 		}
 		switch exprV := expr.Expr.(type) {
 		case *sqlparser.ColName:
-			colArr = append(colArr, exprV)
+			colArr = append(colArr, exprV.Name.String())
 		case *sqlparser.FuncExpr:
 			funcArr = append(funcArr, exprV)
 		default:

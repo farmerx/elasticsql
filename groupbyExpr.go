@@ -9,7 +9,7 @@ import (
 )
 
 // handleSelectGroupBy 处置Select 里面的group by
-func handleSelectGroupBy(Select *sqlparser.Select, size string) ([]byte, error) {
+func handleSelectGroupBy(Select *sqlparser.Select, size string) ([]string, []byte, error) {
 	var aggMap = make(map[string]interface{}, 0)
 	var parentNode *map[string]interface{}
 	//解析各路groupby 当然group by 可能不存在
@@ -19,19 +19,23 @@ func handleSelectGroupBy(Select *sqlparser.Select, size string) ([]byte, error) 
 			handleGroupByColName(exprV, index, size, &aggMap, &parentNode)
 		case *sqlparser.FuncExpr:
 			if err := handleGroupByFuncExpr(exprV, index, size, &aggMap, &parentNode); err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
 	}
 	//  解析各路group by end。。。。。。。。。。。。。。。。
-	funcArr, _, err := handleSelectFuncExpr(Select.SelectExprs)
+	funcArr, colArr, err := handleSelectFuncExpr(Select.SelectExprs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := handleGroupBySelectFuncExpr(funcArr, &aggMap, &parentNode, size); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return json.Marshal(aggMap)
+	if parentNode == nil {
+		return colArr, nil, nil
+	}
+	aggdsl, err := json.Marshal(aggMap)
+	return colArr, aggdsl, err
 }
 
 func handleGroupBySelectFuncExpr(funcExprArr []*sqlparser.FuncExpr, aggMap *map[string]interface{}, parentNode **map[string]interface{}, size string) error {
