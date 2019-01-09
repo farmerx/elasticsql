@@ -227,7 +227,7 @@ func beyondSQLDateHistogram(funcExpr *sqlparser.FuncExpr, innerMap *map[string]i
 		if colName == `field` {
 			field = colVal
 		}
-		if colName == "interval" {
+		if colName == "_interval" {
 			interval = colVal
 		}
 		if colName == "format" {

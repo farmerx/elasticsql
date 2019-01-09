@@ -152,12 +152,12 @@ func Test_SQLConverStats(t *testing.T) {
 }
 
 func Test_SQLDateHistorgram(t *testing.T) {
-	table, dsl, err := esql.SQLConvert(`select * from student group by date_histogram(field="changeTime",interval="1h",format="yyyy-MM-dd HH:mm:ss")`)
+	table, dsl, err := esql.SQLConvert(`select * from student group by date_histogram(field="changeTime", _interval="1h", format="yyyy-MM-dd HH:mm:ss")`)
 	fmt.Println(table, dsl, err)
 }
 
 func Test_SQLHistorgram(t *testing.T) {
-	table, dsl, err := esql.SQLConvert(`select * from student group by histogram(field="grade",interval="10")`)
+	table, dsl, err := esql.SQLConvert(`SELECT online FROM online group by histogram(field="grade", _interval="10")`)
 	fmt.Println(table, dsl, err)
 }
 
