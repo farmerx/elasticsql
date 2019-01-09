@@ -47,11 +47,82 @@ func Test_ParseSelect(t *testing.T) {
 }
 
 func Test_ParseSelectFuncExpr(t *testing.T) {
-	_, x, err := esql.SQLConvert(`select avg(age),min(age),max(age),count(student) from student`)
+	table, x, err := esql.SQLConvert(`select avg(age),min(age),max(age),count(student) from student`)
 	if err != nil {
 		t.Error(err)
 	}
+	if x != `{"query" : {"bool" : {"must": [{"match_all" : {}}]}},"from" : 0,"size" : 0,"aggregations" : {"avg":{"avg":{"field":"age"}},"count":{"count":{"field":"student"}},"max":{"max":{"field":"age"}},"min":{"min":{"field":"age"}}}}` {
+		t.Error("不符合预期")
+	}
+	if table != `student` {
+		t.Error(`不符合预期`)
+	}
+}
+
+func Test_Count(t *testing.T) {
+	table, x, err := esql.SQLConvert(`select count(id) from student`)
+	if err != nil {
+		t.Error(err)
+	}
+	if x != `{"query" : {"bool" : {"must": [{"match_all" : {}}]}},"from" : 0,"size" : 0,"aggregations" : {"count":{"count":{"field":"id"}}}}` {
+		t.Error("不符合预期")
+	}
+	if table != `student` {
+		t.Error(`不符合预期`)
+	}
+}
+
+func Test_DistinctCount(t *testing.T) {
+	table, x, err := esql.SQLConvert(`select count(distinct(age)) from student`)
+	if err != nil {
+		t.Error(err)
+	}
+	if table != `student` {
+		t.Error(`不符合预期`)
+	}
+	if x != `{"query" : {"bool" : {"must": [{"match_all" : {}}]}},"from" : 0,"size" : 0,"aggregations" : {"count":{"cardinality":{"field":"age"}}}}` {
+		t.Error("不符合预期")
+	}
+}
+
+func Test_WhereOperatorCompersion(t *testing.T) {
+	table, x, err := esql.SQLConvert(`select count(distinct(age)) from student where class="一班"`)
+	if err != nil {
+		t.Error(err)
+	}
+	if table != `student` {
+		t.Error(`不符合预期`)
+	}
+	if x != `{"query" : {"bool" : {"must" : [{"term" : {"class" : "一班"}}]}},"from" : 0,"size" : 0,"aggregations" : {"count":{"cardinality":{"field":"age"}}}}` {
+		t.Error("不符合预期")
+	}
+}
+
+func Test_WhereOperatorAnd(t *testing.T) {
+	table, x, err := esql.SQLConvert(`select count(distinct(age)) from student where class="一班" and age > 20`)
+	if err != nil {
+		t.Error(err)
+	}
+	if table != `student` {
+		t.Error(`不符合预期`)
+	}
+	if x != `{"query" : {"bool" : {"must" : [{"term" : {"class" : "一班"}},{"range" : {"age" : {"gt" : "20"}}}]}},"from" : 0,"size" : 0,"aggregations" : {"count":{"cardinality":{"field":"age"}}}}` {
+		t.Error("不符合预期")
+	}
+}
+
+func Test_WhereOperatorAndT(t *testing.T) {
+	table, x, err := esql.SQLConvert(`select count(distinct(age)) from student where class="一班" and age > 20`)
+	if err != nil {
+		t.Error(err)
+	}
+	if table != `student` {
+		t.Error(`不符合预期`)
+	}
 	fmt.Println(x)
+	// if x != `{"query" : {"bool" : {"must" : [{"term" : {"class" : "一班"}},{"range" : {"age" : {"gt" : "20"}}}]}},"from" : 0,"size" : 0,"aggregations" : {"count":{"cardinality":{"field":"age"}}}}` {
+	// 	t.Error("不符合预期")
+	// }
 }
 
 // // select count(distinct mid) from test
