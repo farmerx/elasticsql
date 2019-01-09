@@ -42,7 +42,7 @@ func handleGroupBySelectFuncExpr(funcExprArr []*sqlparser.FuncExpr, aggMap *map[
 	for _, funcExpr := range funcExprArr {
 		if *parentNode != nil {
 			// 非顶级
-			if err := handleGroupByFuncExpr(funcExpr, 1, size, aggMap, parentNode); err != nil {
+			if err := handleGroupByFuncExpr(funcExpr, 0, size, aggMap, parentNode); err != nil {
 				return err
 			}
 		} else {

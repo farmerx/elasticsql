@@ -1,6 +1,7 @@
 package elasticsql
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 )
@@ -43,6 +44,14 @@ func Test_ParseSelect(t *testing.T) {
 	if table != `student` {
 		t.Error(`不符合预期`)
 	}
+}
+
+func Test_ParseSelectFuncExpr(t *testing.T) {
+	_, x, err := esql.SQLConvert(`select avg(age),min(age),max(age),count(student) from student`)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(x)
 }
 
 // // select count(distinct mid) from test
