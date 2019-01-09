@@ -16,17 +16,18 @@ ElasticSQL
 - [x] SQL Group By
 - [x] SQL AND & OR
 - [x] SQL Like & NOT Like
-- [x] SQL COUNT distinct
+- [x] SQL COUNT distinct   count(distinct(mid))
 - [x] SQL In & Not In
 - [x] SQL Between
-- [x] SQL avg()、count(*), count(field), min(field), max(field)
+- [x] SQL avg(field)、count(*), count(field), min(field), max(field)
 
 ## Beyond SQL Features Support：
 - [x] ES TopHits
-- [x] ES date_histogram
-- [x] ES STATS
-- [x] ES RANGE
-- [x] ES DATE_RANGE
+- [x] ES date_histogram  date_histogram(field="changeTime", _interval="1h", format="yyyy-MM-dd HH:mm:ss")
+- [x] ES histogram       histogram(field="grade", _interval="10")
+- [x] ES STATS           stats(field="grade")
+- [x] ES RANGE           range(field="age", range="20,25,30,35,40")
+- [x] ES DATE_RANGE      date_range(field="insert_time", format="yyyy-MM-dd" ,range="2014-08-18, 2014-08-17, now-6d,now")
 
 
 
@@ -54,7 +55,7 @@ Beyond SQL
  * range date group by day
 
 	```
-	select * from test group by date_histogram(field="changeTime",interval="1h",format="yyyy-MM-dd HH:mm:ss")
+	select * from test group by date_histogram(field="changeTime", _interval="1h", format="yyyy-MM-dd HH:mm:ss")
 	```
  * stats
  	```
