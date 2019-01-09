@@ -23,11 +23,11 @@ ElasticSQL
 
 ## Beyond SQL Features Support：
 - [x] ES TopHits
-- [x] ES date_histogram  date_histogram(field="changeTime", _interval="1h", format="yyyy-MM-dd HH:mm:ss")
-- [x] ES histogram       histogram(field="grade", _interval="10")
-- [x] ES STATS           stats(field="grade")
-- [x] ES RANGE           range(field="age", range="20,25,30,35,40")
-- [x] ES DATE_RANGE      date_range(field="insert_time", format="yyyy-MM-dd" ,range="2014-08-18, 2014-08-17, now-6d,now")
+- [x] ES date_histogram    |||   `date_histogram(field="changeTime", _interval="1h", format="yyyy-MM-dd HH:mm:ss")`
+- [x] ES histogram      ||| `histogram(field="grade", _interval="10")`
+- [x] ES STATS           ||| `stats(field="grade")`
+- [x] ES RANGE           ||| `range(field="age", range="20,25,30,35,40")`
+- [x] ES DATE_RANGE      |||  `date_range(field="insert_time", format="yyyy-MM-dd" ,range="2014-08-18, 2014-08-17, now-6d,now")`
 
 
 
