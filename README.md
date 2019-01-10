@@ -12,7 +12,7 @@ ElasticSQL
 
 - [x] SQL Select
 - [x] SQL Where
-- [x] SQL Order BySQL
+- [x] SQL Order By
 - [x] SQL Group By
 - [x] SQL AND & OR
 - [x] SQL Like & NOT Like
