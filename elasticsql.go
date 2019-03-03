@@ -20,7 +20,7 @@ func NewElasticSQL() *ElasticSQL {
 func (esql *ElasticSQL) SQLConvert(sql string) (table string, dsl string, err error) {
 	stmt, err := sqlparser.Parse(sql)
 	if err != nil {
-		return ``, ``, errors.New(`ElastciSQL: ` + err.Error())
+		return ``, ``, errors.New(`ElasticSQL: ` + err.Error())
 	}
 	switch v := stmt.(type) {
 	case *sqlparser.Select:
