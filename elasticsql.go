@@ -64,7 +64,7 @@ func handleParseSelect(selectStmt *sqlparser.Select) (table string, dsl string, 
 		}
 	}
 
-	return table, buildDSL(querydsl, from, size, string(aggsdsl), []string{}, colArr), nil
+	return table, buildDSL(querydsl, from, size, string(aggsdsl), orderByArr, colArr), nil
 }
 
 // extract func expressions from select exprs
