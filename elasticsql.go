@@ -146,6 +146,8 @@ func handleSelectWhere(expr *sqlparser.Expr, topLevel bool) (string, error) {
 		return handleRangeCond(exprVal, topLevel)
 	case *sqlparser.ParenExpr:
 		return handleSelectWhere(&exprVal.Expr, topLevel)
+	case *sqlparser.IsExpr:
+		return handleIsExpr(exprVal)
 	case *sqlparser.NotExpr:
 		return ``, errors.New("ElasticSQL: not expression currently not supported")
 	default:
