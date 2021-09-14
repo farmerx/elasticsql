@@ -110,6 +110,32 @@ func handlecomparisonExprOperator(comparisonExpr *sqlparser.ComparisonExpr, colV
 	return dslExpr
 }
 
+//handleIsExpr build is null,is not null, is true, is false condition
+func handleIsExpr(comparisonExpr *sqlparser.IsExpr) (dslExpr string, err error) {
+
+	colNameParser, ok := comparisonExpr.Expr.(*sqlparser.ColName)
+	if !ok {
+		return "", errors.New("ElasticSQL: invalid comparison expression, the left must be a column name")
+	}
+	colName := strings.Replace(sqlparser.String(colNameParser), "`", "", -1)
+	switch comparisonExpr.Operator {
+	case sqlparser.IsNotNullStr:
+		dslExpr = fmt.Sprintf(`{"bool":{"must":{"exists" : {"field": "%v"}}}}`, colName)
+	case sqlparser.IsNullStr:
+		dslExpr = fmt.Sprintf(`{"bool":{"must_not":{"exists" : {"field": "%v"}}}}`, colName)
+	case sqlparser.IsTrueStr, sqlparser.IsNotFalseStr:
+		dslExpr = fmt.Sprintf(`{"term": {"%v": {"value": true}}}`, colName)
+	case sqlparser.IsNotTrueStr, sqlparser.IsFalseStr:
+		dslExpr = fmt.Sprintf(`{"term": {"%v": {"value": false}}}`, colName)
+	default:
+	}
+	// the root node need to have bool and must
+	//if topLevel {
+	//	dslExpr = fmt.Sprintf(`{"bool" : {"must" : [%v]}}`, dslExpr)
+	//}
+	return dslExpr, nil
+}
+
 func buildNestedFuncStrValue(nestedFunc *sqlparser.FuncExpr) (string, error) {
 	var result string
 	switch nestedFunc.Name.String() {
